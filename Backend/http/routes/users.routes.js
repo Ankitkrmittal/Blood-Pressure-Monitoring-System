@@ -1,5 +1,7 @@
 import {Router} from 'express';
+import { recommendationController } from '../controllers/recommendation.controller.js';
 
 const router = Router();
-//router.get('/chat',);
-//router.get('/reports',)
+router.post('/recommendation',recommendationController);
+//router.post('/update/bp',)
+export default router;

@@ -22,5 +22,15 @@ model User {
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
   
-  
+  bloodPressures BloodPressure[]
+}
+
+model BloodPressure {
+  id         Int      @id @default(autoincrement())
+  systolic   Int
+  diastolic  Int
+  createdAt  DateTime @default(now())
+
+  userId     String   @db.Uuid
+  user       User     @relation(fields: [userId], references: [id])
 }
