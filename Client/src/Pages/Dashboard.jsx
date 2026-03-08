@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { bpApi } from "../api/bpApi";
+import ChatBot from "../components/ChatBot";
 import useAuth from "../context/authContext";
+import "../styles/dashboard.css";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -12,11 +14,6 @@ const Dashboard = () => {
   const submitHandler = async (e) => {
     e.preventDefault();
 
-    if (!systolic || !diastolic) {
-      setMessage("Please enter both BP values");
-      return;
-    }
-
     try {
       await bpApi.updateBP({
         userId: user.id,
@@ -24,52 +21,60 @@ const Dashboard = () => {
         diastolic: Number(diastolic),
       });
 
-      setMessage("Blood Pressure Updated Successfully ✅");
+      setMessage("BP Saved Successfully ✅");
 
-      // clear inputs
       setSystolic("");
       setDiastolic("");
 
     } catch (error) {
-      console.error(error);
-      setMessage("Failed to update BP ❌");
+      setMessage("Failed to update BP");
     }
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>Hello {user?.name}</h2>
+    <div className="dashboard-container">
 
-      <h3>Update Blood Pressure</h3>
+      <div className="dashboard-header">
+        <h1>Health Monitoring Dashboard</h1>
+        <p>Welcome {user?.name}</p>
+      </div>
 
-      <form onSubmit={submitHandler}>
+      <div className="dashboard-grid">
 
-        <div style={{ marginBottom: "10px" }}>
-          <input
-            type="number"
-            placeholder="Systolic (e.g. 120)"
-            value={systolic}
-            onChange={(e) => setSystolic(e.target.value)}
-          />
+        {/* BP Update Card */}
+        <div className="card">
+
+          <h2>Update Blood Pressure</h2>
+
+          <form onSubmit={submitHandler}>
+
+            <input
+              type="number"
+              placeholder="Systolic"
+              value={systolic}
+              onChange={(e) => setSystolic(e.target.value)}
+            />
+
+            <input
+              type="number"
+              placeholder="Diastolic"
+              value={diastolic}
+              onChange={(e) => setDiastolic(e.target.value)}
+            />
+
+            <button type="submit">Save BP</button>
+
+          </form>
+
+          {message && <p className="message">{message}</p>}
+
         </div>
 
-        <div style={{ marginBottom: "10px" }}>
-          <input
-            type="number"
-            placeholder="Diastolic (e.g. 80)"
-            value={diastolic}
-            onChange={(e) => setDiastolic(e.target.value)}
-          />
-        </div>
+        {/* Chatbot */}
+        <ChatBot />
 
-        <button type="submit">Update BP</button>
-      </form>
+      </div>
 
-      {message && (
-        <p style={{ marginTop: "15px" }}>
-          {message}
-        </p>
-      )}
     </div>
   );
 };

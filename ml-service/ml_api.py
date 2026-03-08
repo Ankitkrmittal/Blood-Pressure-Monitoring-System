@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from pydantic import BaseModel
+import pandas as pd
 import joblib
 
 # create FastAPI app
@@ -6,6 +8,16 @@ app = FastAPI()
 
 # load trained model
 model = joblib.load("hypertension_model.pkl")
+
+
+# Request schema
+class HealthData(BaseModel):
+    age: int
+    weight: float
+    systolic: int
+    diastolic: int
+    smoking: int
+    exercise: int
 
 
 def generate_recommendations(risk):
@@ -41,19 +53,26 @@ def generate_recommendations(risk):
         ]
 
 
+@app.get("/")
+def home():
+    return {"message": "Hypertension ML API running"}
+
+
 @app.post("/predict")
-def predict(data: dict):
+def predict(data: HealthData):
 
-    age = data["age"]
-    weight = data["weight"]
-    systolic = data["systolic"]
-    diastolic = data["diastolic"]
-    smoking = data["smoking"]
-    exercise = data["exercise"]
+    # convert input to dataframe (removes sklearn warning)
+    input_data = pd.DataFrame([{
+        "age": data.age,
+        "weight": data.weight,
+        "systolic": data.systolic,
+        "diastolic": data.diastolic,
+        "smoking": data.smoking,
+        "exercise": data.exercise
+    }])
 
-    prediction = model.predict([[
-        age, weight, systolic, diastolic, smoking, exercise
-    ]])
+    # prediction
+    prediction = model.predict(input_data)
 
     risk = int(prediction[0])
 

@@ -18,21 +18,6 @@ async function updateBP({ userId, systolic, diastolic }) {
   return data;
 }
 
-// async function recommendation({ systolic, diastolic }) {
-//   const { data } = await axios({
-//     method: "post",
-//     url: "/api/user/recommendation",
-//     headers: {
-//       Authorization: `Bearer ${auth.token || ""}`,
-//     },
-//     data: {
-//       systolic,
-//       diastolic,
-//     },
-//   });
-
-//   return data;
-// }
 
 export const bpApi = {
   updateBP,
