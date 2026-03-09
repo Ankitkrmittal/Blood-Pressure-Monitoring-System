@@ -1,5 +1,6 @@
 import  {Router} from 'express';
-import { addBPReading } from '../controllers/bp.controller.js';
+import { addBPReading, getBPHistory } from '../controllers/bp.controller.js';
 const router = Router();
-router.post('/bp',addBPReading);
+router.post('/add',addBPReading);
+router.get('/history',getBPHistory)
 export default router;

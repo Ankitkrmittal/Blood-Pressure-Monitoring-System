@@ -13,3 +13,17 @@ export async function createBPReading(userId, systolic, diastolic) {
 
   return result;
 }
+
+export async function getUserBPHistory(userId)  {
+
+  const history = await prisma.bloodPressure.findMany({
+    where: {
+      userId
+    },
+    orderBy: {
+      createdAt: "desc"
+    }
+  });
+
+  return history;
+};

@@ -11,12 +11,40 @@ const Dashboard = () => {
   const [diastolic, setDiastolic] = useState("");
   const [message, setMessage] = useState("");
 
+  const [history, setHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const fetchHistory = async () => {
+
+    setLoading(true);
+
+    try {
+
+      const res = await bpApi.getBPHistory();
+
+      setHistory(res.data);
+
+      setShowHistory(true);
+
+    } catch (error) {
+
+      console.error("Failed to fetch BP history", error);
+
+    } finally {
+
+      setLoading(false);
+
+    }
+
+  };
+
   const submitHandler = async (e) => {
     e.preventDefault();
 
     try {
+
       await bpApi.updateBP({
-        userId: user.id,
         systolic: Number(systolic),
         diastolic: Number(diastolic),
       });
@@ -27,8 +55,14 @@ const Dashboard = () => {
       setDiastolic("");
 
     } catch (error) {
+
       setMessage("Failed to update BP");
+
     }
+  };
+
+  const formatDate = (date) => {
+    return new Date(date).toLocaleString();
   };
 
   return (
@@ -74,6 +108,64 @@ const Dashboard = () => {
         <ChatBot />
 
       </div>
+
+      {/* Fetch BP History Button */}
+
+      <div style={{ marginTop: "30px" }}>
+
+        <button onClick={fetchHistory}>
+          View Previous BP Readings
+        </button>
+
+      </div>
+
+      {/* BP History Table */}
+
+      {showHistory && (
+
+        <div className="card history-card">
+
+          <h2>Previous BP Readings</h2>
+
+          {loading ? (
+            <p>Loading...</p>
+          ) : history.length === 0 ? (
+            <p>No readings found</p>
+          ) : (
+
+            <table>
+
+              <thead>
+                <tr>
+                  <th>Date & Time</th>
+                  <th>Systolic</th>
+                  <th>Diastolic</th>
+                  <th>BP</th>
+                </tr>
+              </thead>
+
+              <tbody>
+
+                {history.map((bp) => (
+
+                  <tr key={bp.id}>
+                    <td>{formatDate(bp.createdAt)}</td>
+                    <td>{bp.systolic}</td>
+                    <td>{bp.diastolic}</td>
+                    <td>{bp.systolic}/{bp.diastolic}</td>
+                  </tr>
+
+                ))}
+
+              </tbody>
+
+            </table>
+
+          )}
+
+        </div>
+
+      )}
 
     </div>
   );

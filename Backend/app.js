@@ -16,7 +16,7 @@ app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use('/api/auth',authRoutes);
 app.use('/api/user/',recommendationRoutes);
-app.use('/api/update/',bpRoutes);
+app.use('/api/bp/',requireAuth,bpRoutes);
 app.get('/',(req,res)=>{
     res.send('hello ankit')
 })

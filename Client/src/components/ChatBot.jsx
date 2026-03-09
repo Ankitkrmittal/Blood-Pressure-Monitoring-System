@@ -33,7 +33,29 @@ const ChatBot = () => {
     return value.toLowerCase() === "yes" ? 1 : 0;
   };
 
+  const resetChat = () => {
+
+    setStep(0);
+    setInput("");
+
+    setMessages([
+      { sender: "bot", text: questions[0] }
+    ]);
+
+    setData({
+      age: "",
+      systolic: "",
+      diastolic: "",
+      smoking: "",
+      weight: "",
+      exercise: ""
+    });
+
+  };
+
   const sendMessage = async () => {
+
+    if (!input.trim()) return;
 
     const userMessage = { sender: "user", text: input };
 
@@ -68,43 +90,46 @@ const ChatBot = () => {
 
         const result = await mlApi.getRecommendation(updatedData);
 
-            console.log("API RESPONSE:", result);
+        const recs = result.data.recommendations;
+        const risk = result.data.risk_level;
 
-            const recs = result.data.recommendations;
-            const risk = result.data.risk_level;
+        const botMessage = {
+          sender: "bot",
+          risk: risk,
+          recommendations: recs
+        };
 
-            const botMessage = {
-            sender: "bot",
-            text: `Risk Level: ${risk}
-
-            Recommendations:
-            ${recs.map(r => "• " + r).join("\n")}`
-            };
-
-            setMessages([...newMessages, botMessage]);
+        setMessages([...newMessages, botMessage]);
 
       } catch (error) {
 
-  console.error("API Error:", error);
+        console.error("API Error:", error);
 
-  const botMessage = {
-    sender: "bot",
-    text: "Error getting recommendation. Please try again."
-  };
+        const botMessage = {
+          sender: "bot",
+          text: "Error getting recommendation. Please try again."
+        };
 
-  setMessages([...newMessages, botMessage]);
-}
+        setMessages([...newMessages, botMessage]);
+
+      }
 
     }
 
     setInput("");
+
   };
 
   return (
 
     <div className="chatbot">
 
-      <h2>Health Assistant</h2>
+      <div className="chat-header">
+        <h2>Health Assistant</h2>
+        <button className="reset-btn" onClick={resetChat}>
+          Reset Chat
+        </button>
+      </div>
 
       <div className="chat-window">
 
@@ -113,7 +138,34 @@ const ChatBot = () => {
             key={index}
             className={msg.sender === "bot" ? "bot-msg" : "user-msg"}
           >
-            {msg.text}
+
+            {msg.text && <p>{msg.text}</p>}
+
+            {msg.recommendations && (
+              <div>
+
+                <h4
+                  style={{
+                    color:
+                      msg.risk === "High"
+                        ? "red"
+                        : msg.risk === "Medium"
+                        ? "orange"
+                        : "green"
+                  }}
+                >
+                  Risk Level: {msg.risk}
+                </h4>
+
+                <ul>
+                  {msg.recommendations.map((rec, i) => (
+                    <li key={i}>{rec}</li>
+                  ))}
+                </ul>
+
+              </div>
+            )}
+
           </div>
         ))}
 
