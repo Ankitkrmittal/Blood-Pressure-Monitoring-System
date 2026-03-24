@@ -4,7 +4,7 @@ import {
  addMedication,
  getUserMedications,
  markMedicationTaken,
-//  updateMedicationTime,
+  updateMedicationTime,
   deleteMedication
 } from "../controllers/medication.controller.js"
 
@@ -16,7 +16,7 @@ router.get("/",  getUserMedications)
 
 router.post("/taken", markMedicationTaken)
 
-// router.put("/:id",  updateMedicationTime)
+router.put("/:id",  updateMedicationTime)
 
 router.delete("/:id",  deleteMedication)
 

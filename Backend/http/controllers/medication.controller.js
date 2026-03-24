@@ -117,3 +117,94 @@ export const deleteMedication = async(req,res)=>{
     })
   }
 }
+
+// export const updateMedicationTime = async (req, res) => {
+
+//   try {
+//     const { id } = req.params;
+//     const { time } = req.body; 
+
+//     const medication = await prisma.medicationSchedule.findUnique({
+//       where: { id: Number(id) } 
+//     });
+
+//     if (!medication) {
+//       return res.status(404).json({
+//         message: "Medication not found"
+//       });
+//     }
+
+//     await prisma.medicationSchedule.update({
+//       where: { id: Number(id) }, 
+//       data: {
+//         time 
+//       }
+//     });
+
+//     res.json({
+//       message: "Time updated successfully"
+//     });
+
+//   } catch (error) {
+//     res.status(500).json({
+//       message: "Couldn't update time at this moment!"
+//     });
+//   }
+// };
+
+export const updateMedicationTime = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { time } = req.body; 
+
+    const medicationId = Number(id);
+
+    
+    await prisma.medicationSchedule.update({
+      where: { id: medicationId },
+      data: { time }
+    });
+
+    
+    const futureLogs = await prisma.medicationLog.findMany({
+      where: {
+        medicationId,
+        scheduledTime: {
+          gte: new Date() // only future logs
+        }
+      }
+    });
+
+    
+    const [hours, minutes] = time.split(":");
+
+    
+    const updatePromises = futureLogs.map((log) => {
+      const newDate = new Date(log.scheduledTime);
+
+      newDate.setHours(Number(hours));
+      newDate.setMinutes(Number(minutes));
+      newDate.setSeconds(0);
+      newDate.setMilliseconds(0);
+
+      return prisma.medicationLog.update({
+        where: { id: log.id },
+        data: {
+          scheduledTime: newDate
+        }
+      });
+    });
+
+    await Promise.all(updatePromises);
+
+    res.json({
+      message: "Future logs updated successfully"
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Couldn't update time"
+    });
+  }
+};
