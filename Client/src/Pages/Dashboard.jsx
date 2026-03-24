@@ -2,11 +2,13 @@ import React, { useState } from "react";
 import { bpApi } from "../api/bpApi";
 import ChatBot from "../components/ChatBot";
 import useAuth from "../context/authContext";
-import "../styles/dashboard.css";
+import { useNavigate } from "react-router-dom";
+ import MedicationReminder from "./MedicationReminder";
+// import "../styles/dashboard.css";
 
 const Dashboard = () => {
   const { user } = useAuth();
-
+  const navigate = useNavigate();
   const [systolic, setSystolic] = useState("");
   const [diastolic, setDiastolic] = useState("");
   const [message, setMessage] = useState("");
@@ -14,7 +16,7 @@ const Dashboard = () => {
   const [history, setHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [loading, setLoading] = useState(false);
-
+  
   const fetchHistory = async () => {
 
     setLoading(true);
@@ -49,7 +51,7 @@ const Dashboard = () => {
         diastolic: Number(diastolic),
       });
 
-      setMessage("BP Saved Successfully ✅");
+      setMessage("BP Saved Successfully");
 
       setSystolic("");
       setDiastolic("");
@@ -64,15 +66,42 @@ const Dashboard = () => {
   const formatDate = (date) => {
     return new Date(date).toLocaleString();
   };
+  
+  const handleLogout = () => {
+  localStorage.removeItem("token"); // delete token
+  navigate("/signin"); // redirect to signin page
+  };
 
   return (
+
+     
+
     <div className="dashboard-container">
 
+
+
+      
+          <div className="dashboard-header">
+        <div className="header-top">
+          {/* <h1>Health Monitoring Dashboard</h1> */}
+
+          <button className="logout-btn" onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
+
+        {/* <p>Welcome {user?.name}</p> */}
+      </div>
+
+
+      
       <div className="dashboard-header">
         <h1>Health Monitoring Dashboard</h1>
         <p>Welcome {user?.name}</p>
+        <p>Happy to see you 😊 {user?.name}</p>
+        <p>You can Track your health on this platform hoping a healthy recovery</p>
       </div>
-
+       <MedicationReminder/>
       <div className="dashboard-grid">
 
         {/* BP Update Card */}

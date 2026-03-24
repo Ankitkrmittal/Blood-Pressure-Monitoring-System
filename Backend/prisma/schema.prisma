@@ -23,6 +23,8 @@ model User {
   updatedAt     DateTime             @updatedAt
   
   bloodPressures BloodPressure[]
+  medications    MedicationSchedule[]
+  
 }
 
 model BloodPressure {
@@ -33,4 +35,35 @@ model BloodPressure {
 
   userId     String   @db.Uuid
   user       User     @relation(fields: [userId], references: [id])
+}
+
+model MedicationSchedule {
+  id          Int      @id @default(autoincrement())
+  medicineName String
+  dosage      String
+  time        String   // e.g. "08:00 AM"
+  isActive    Boolean  @default(true)
+
+  userId      String   @db.Uuid
+  user        User     @relation(fields: [userId], references: [id])
+
+  logs        MedicationLog[]
+
+  createdAt   DateTime @default(now())
+  updatedAt     DateTime @default(now())
+}
+
+model MedicationLog {
+  id            Int      @id @default(autoincrement())
+  taken         Boolean  @default(false)
+  scheduledTime DateTime
+  takenAt       DateTime?
+  reminderSent   Boolean  @default(false)
+  isMissed       Boolean  @default(false)
+
+  medicationId  Int
+  medication    MedicationSchedule @relation(fields: [medicationId], references: [id])
+
+  createdAt     DateTime @default(now())
+  @@unique([medicationId, scheduledTime])
 }

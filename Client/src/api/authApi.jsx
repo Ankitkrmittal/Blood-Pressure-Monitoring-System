@@ -33,7 +33,7 @@ async function me({email,password}) {
     const {
         data:{data},
     } = await axios({
-        method:"post",
+        method:"get",
         url:"/api/auth/me",
         headers:{
             Authorization: `Bearer ${auth.token || ""}`,

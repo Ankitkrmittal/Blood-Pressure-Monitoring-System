@@ -12,15 +12,17 @@ import authRoutes from './http/routes/auth.routes.js'
 import requireAuth from './http/middlewares/requireAuth.js';
 import bpRoutes from './http/routes/bp.routes.js';
 import recommendationRoutes from './http/routes/users.routes.js';
+import "./http/jobs/medicationJob.js";
+import medicationRoutes from './http/routes/medication.routes.js';
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use('/api/auth',authRoutes);
 app.use('/api/user/',recommendationRoutes);
 app.use('/api/bp/',requireAuth,bpRoutes);
+app.use('/api/medication',requireAuth,medicationRoutes);
 app.get('/',(req,res)=>{
     res.send('hello ankit')
 })
-//app.use('/api/user',requireAuth,);
 
 app.listen(PORT,()=>{
     console.log(`http://localhost:${PORT}`);
