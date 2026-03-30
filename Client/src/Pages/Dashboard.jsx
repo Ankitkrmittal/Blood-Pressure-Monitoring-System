@@ -4,6 +4,7 @@ import ChatBot from "../components/ChatBot";
 import useAuth from "../context/authContext";
 import { useNavigate } from "react-router-dom";
  import MedicationReminder from "./MedicationReminder";
+import ProfilePage from "./ProfilePage";
 // import "../styles/dashboard.css";
 
 const Dashboard = () => {
@@ -96,6 +97,9 @@ const Dashboard = () => {
 
       
       <div className="dashboard-header">
+        <ProfilePage/>
+
+
         <h1>Health Monitoring Dashboard</h1>
         <p>Welcome {user?.name}</p>
         <p>Happy to see you 😊 {user?.name}</p>

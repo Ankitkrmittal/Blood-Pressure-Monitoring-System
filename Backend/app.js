@@ -14,12 +14,14 @@ import bpRoutes from './http/routes/bp.routes.js';
 import recommendationRoutes from './http/routes/users.routes.js';
 import "./http/jobs/medicationJob.js";
 import medicationRoutes from './http/routes/medication.routes.js';
+import profileRoutes from './http/routes/profile.routes.js'
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use('/api/auth',authRoutes);
 app.use('/api/user/',recommendationRoutes);
 app.use('/api/bp/',requireAuth,bpRoutes);
 app.use('/api/medication',requireAuth,medicationRoutes);
+app.use('/api/profile',requireAuth,profileRoutes)
 app.get('/',(req,res)=>{
     res.send('hello ankit')
 })

@@ -23,7 +23,7 @@ model User {
   updatedAt     DateTime             @updatedAt
   
   //relations to user
-  healthProfile   HealthProfile?
+  healthProfile   HealthProfile[]
   bloodPressures BloodPressure[]
   medications    MedicationSchedule[]
   

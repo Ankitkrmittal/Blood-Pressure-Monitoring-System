@@ -34,6 +34,7 @@ const MedicationForm = ({ refresh }) => {
         type="text"
         placeholder="Medicine Name"
         value={medicineName}
+        required
         onChange={(e)=>setMedicineName(e.target.value)}
       />
 
@@ -41,12 +42,14 @@ const MedicationForm = ({ refresh }) => {
         type="text"
         placeholder="Dosage in milligram(mg)"
         value={dosage}
+        required
         onChange={(e)=>setDosage(e.target.value)}
       />
 
       <input
         type="time"
         value={time}
+        required
         onChange={(e)=>setTime(e.target.value)}
       />
 
