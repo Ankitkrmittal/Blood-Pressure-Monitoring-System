@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { editProfile } from "../controllers/profile.controller.js";
+import { editProfile, getProfile } from "../controllers/profile.controller.js";
 const router = Router();
-router.post('/',editProfile)
+router.get("/", getProfile);
+router.post("/", editProfile);
 
 export default router;

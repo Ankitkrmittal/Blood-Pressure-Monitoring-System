@@ -44,6 +44,20 @@ async function getRecommendation(data) {
   return response;
 }
 
+async function getAssistantResponse(message = "", chatHistory = []) {
+  const { data: response } = await axios({
+    method: "post",
+    url: "/api/user/assistant",
+    data: {
+      message,
+      chatHistory,
+    },
+  });
+
+  return response;
+}
+
 export const mlApi = {
-  getRecommendation
+  getRecommendation,
+  getAssistantResponse,
 };

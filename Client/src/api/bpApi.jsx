@@ -18,7 +18,6 @@ async function updateBP({  systolic, diastolic }) {
   return data;
 }
 async function getBPHistory() {
-
   const { data } = await axios({
     method: "get",
     url: "/api/bp/history",
@@ -27,11 +26,10 @@ async function getBPHistory() {
     },
   });
 
-  return data;
+  return data.data || [];
 }
 
 export const bpApi = {
   updateBP,
   getBPHistory,
 };
-

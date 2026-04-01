@@ -1,188 +1,210 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { mlApi } from "../api/mlApi";
 import "../styles/dashboard.css";
 
-const questions = [
-  "Enter your age",
-  "Enter your systolic BP",
-  "Enter your diastolic BP",
-  "Do you smoke? (yes/no)",
-  "What is your body weight?",
-  "Do you exercise daily? (yes/no)"
+const suggestedPrompts = [
+  "Give me a full health summary",
+  "What diet should I follow?",
+  "How can I improve my blood pressure?",
+  "What should I focus on this week?",
 ];
 
+const riskToneMap = {
+  low: "#15803d",
+  moderate: "#d97706",
+  high: "#dc2626",
+};
+
 const ChatBot = () => {
-
-  const [step, setStep] = useState(0);
   const [input, setInput] = useState("");
-
   const [messages, setMessages] = useState([
-    { sender: "bot", text: questions[0] }
+    { sender: "bot", text: "Loading your health assistant..." },
   ]);
+  const [loading, setLoading] = useState(true);
+  const [assistantContext, setAssistantContext] = useState(null);
 
-  const [data, setData] = useState({
-    age: "",
-    systolic: "",
-    diastolic: "",
-    smoking: "",
-    weight: "",
-    exercise: ""
-  });
+  const loadAssistant = async (message = "", chatHistoryOverride = null) => {
+    setLoading(true);
 
-  const convertYesNo = (value) => {
-    return value.toLowerCase() === "yes" ? 1 : 0;
-  };
+    try {
+      const chatHistory = (chatHistoryOverride || messages)
+        .filter((item) => item.text)
+        .map((item) => ({
+          sender: item.sender,
+          text: item.text,
+        }));
+      const response = await mlApi.getAssistantResponse(message, chatHistory);
+      const data = response.data;
+      setAssistantContext(data);
 
-  const resetChat = () => {
-
-    setStep(0);
-    setInput("");
-
-    setMessages([
-      { sender: "bot", text: questions[0] }
-    ]);
-
-    setData({
-      age: "",
-      systolic: "",
-      diastolic: "",
-      smoking: "",
-      weight: "",
-      exercise: ""
-    });
-
-  };
-
-  const sendMessage = async () => {
-
-    if (!input.trim()) return;
-
-    const userMessage = { sender: "user", text: input };
-
-    let updatedData = { ...data };
-
-    if (step === 0) updatedData.age = Number(input);
-    if (step === 1) updatedData.systolic = Number(input);
-    if (step === 2) updatedData.diastolic = Number(input);
-    if (step === 3) updatedData.smoking = convertYesNo(input);
-    if (step === 4) updatedData.weight = Number(input);
-    if (step === 5) updatedData.exercise = convertYesNo(input);
-
-    setData(updatedData);
-
-    let newMessages = [...messages, userMessage];
-
-    if (step < questions.length - 1) {
-
-      const botMessage = {
-        sender: "bot",
-        text: questions[step + 1]
-      };
-
-      newMessages.push(botMessage);
-
-      setMessages(newMessages);
-      setStep(step + 1);
-
-    } else {
-
-      try {
-
-        const result = await mlApi.getRecommendation(updatedData);
-
-        const recs = result.data.recommendations;
-        const risk = result.data.risk_level;
-
-        const botMessage = {
-          sender: "bot",
-          risk: risk,
-          recommendations: recs
-        };
-
-        setMessages([...newMessages, botMessage]);
-
-      } catch (error) {
-
-        console.error("API Error:", error);
-
-        const botMessage = {
-          sender: "bot",
-          text: "Error getting recommendation. Please try again."
-        };
-
-        setMessages([...newMessages, botMessage]);
-
+      if (!message) {
+        setMessages([
+          {
+            sender: "bot",
+            text: data.reply,
+          },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            sender: "bot",
+            text: data.reply,
+          },
+        ]);
       }
+    } catch (error) {
+      console.error("Assistant error:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "bot",
+          text: "I could not generate guidance right now. Please try again.",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
+    loadAssistant();
+  }, []);
+
+  const sendMessage = async (messageOverride) => {
+    const message = (messageOverride ?? input).trim();
+    if (!message || loading) {
+      return;
     }
 
+    const nextMessages = [...messages, { sender: "user", text: message }];
+    setMessages(nextMessages);
     setInput("");
+    await loadAssistant(message, nextMessages);
+  };
 
+  const resetChat = async () => {
+    setMessages([{ sender: "bot", text: "Refreshing your saved health context..." }]);
+    setInput("");
+    await loadAssistant();
   };
 
   return (
-
     <div className="chatbot">
-
       <div className="chat-header">
         <h2>Health Assistant</h2>
-        <button className="reset-btn" onClick={resetChat}>
-          Reset Chat
+        <button className="reset-btn" type="button" onClick={resetChat}>
+          Refresh Context
         </button>
       </div>
 
-      <div className="chat-window">
+      {assistantContext && (
+        <div className="assistant-insight">
+          <div className="assistant-insight__chip">
+            Risk:
+            <strong style={{ color: riskToneMap[assistantContext.riskLevel] || "#2563eb" }}>
+              {` ${assistantContext.riskLevel}`}
+            </strong>
+          </div>
+          <div className="assistant-insight__chip">
+            BP Status:
+            <strong>{` ${assistantContext.bloodPressureStatus}`}</strong>
+          </div>
+          {assistantContext.profileSnapshot?.dietType && (
+            <div className="assistant-insight__chip">
+              Diet:
+              <strong>{` ${assistantContext.profileSnapshot.dietType}`}</strong>
+            </div>
+          )}
+          {assistantContext.profileSnapshot?.bmi && (
+            <div className="assistant-insight__chip">
+              BMI:
+              <strong>{` ${assistantContext.profileSnapshot.bmi}`}</strong>
+            </div>
+          )}
+        </div>
+      )}
 
+      {assistantContext?.missingFields?.length > 0 && (
+        <div className="assistant-warning">
+          Add these profile fields for better recommendations: {assistantContext.missingFields.join(", ")}.
+        </div>
+      )}
+
+      {assistantContext?.dietRecommendations?.length > 0 && (
+        <div className="assistant-recommendation-list">
+          <h3>Diet Priorities</h3>
+          <ul>
+            {assistantContext.dietRecommendations.slice(0, 3).map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {assistantContext?.followUpPrompts?.length > 0 && (
+        <div className="assistant-recommendation-list">
+          <h3>Suggested Follow-ups</h3>
+          <div className="assistant-prompts assistant-prompts--inline">
+            {assistantContext.followUpPrompts.map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                className="assistant-prompt"
+                onClick={() => sendMessage(prompt)}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="chat-window">
         {messages.map((msg, index) => (
           <div
             key={index}
             className={msg.sender === "bot" ? "bot-msg" : "user-msg"}
           >
-
-            {msg.text && <p>{msg.text}</p>}
-
-            {msg.recommendations && (
-              <div>
-
-                <h4
-                  style={{
-                    color:
-                      msg.risk === "High"
-                        ? "red"
-                        : msg.risk === "Medium"
-                        ? "orange"
-                        : "green"
-                  }}
-                >
-                  Risk Level: {msg.risk}
-                </h4>
-
-                <ul>
-                  {msg.recommendations.map((rec, i) => (
-                    <li key={i}>{rec}</li>
-                  ))}
-                </ul>
-
-              </div>
-            )}
-
+            <p>{msg.text}</p>
           </div>
         ))}
+      </div>
 
+      <div className="assistant-prompts">
+        {suggestedPrompts.map((prompt) => (
+          <button
+            key={prompt}
+            type="button"
+            className="assistant-prompt"
+            onClick={() => sendMessage(prompt)}
+          >
+            {prompt}
+          </button>
+        ))}
       </div>
 
       <div className="chat-input">
-
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your answer..."
+          placeholder={
+            loading
+              ? "Loading your profile-based recommendations..."
+              : "Ask about diet, BP, exercise, sleep, smoking, or your health goal..."
+          }
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              sendMessage();
+            }
+          }}
         />
 
-        <button onClick={sendMessage}>Send</button>
-
+        <button type="button" onClick={() => sendMessage()} disabled={loading}>
+          Send
+        </button>
       </div>
-
     </div>
   );
 };

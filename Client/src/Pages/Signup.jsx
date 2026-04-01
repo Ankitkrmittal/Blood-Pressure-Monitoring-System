@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import useAuth from "../context/authContext";
 import auth from "../lib/auth";
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 
 const Signup = () => {
   const [name, setName] = useState("");
@@ -44,7 +44,7 @@ const Signup = () => {
 
       <button type="submit">Signup</button>
     </form>
-    Already a user? <button onClick={()=> navigate('/signin')}>Signin</button>
+    Already a user? <button onClick={() => navigate("/signin")}>Signin</button>
    </>
   );
 };

@@ -26,6 +26,7 @@ model User {
   healthProfile   HealthProfile[]
   bloodPressures BloodPressure[]
   medications    MedicationSchedule[]
+  consultations  ConsultationRequest[]
   
 }
 
@@ -111,4 +112,20 @@ model MedicationLog {
 
   createdAt     DateTime @default(now())
   @@unique([medicationId, scheduledTime])
+}
+
+model ConsultationRequest {
+  id              Int      @id @default(autoincrement())
+  doctorName      String
+  doctorSpecialty String
+  patientMessage  String
+  symptoms        String?
+  preferredDate   DateTime?
+  status          String   @default("pending")
+  doctorReply     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  userId          String   @db.Uuid
+  user            User     @relation(fields: [userId], references: [id])
 }

@@ -1,6 +1,19 @@
 import {  PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
+export const getProfile = async (req, res) => {
+  try {
+    const profile = await prisma.healthProfile.findUnique({
+      where: {
+        userId: req.user.id,
+      },
+    });
+
+    res.json(profile);
+  } catch (err) {
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
 
 export const editProfile = async (req, res) => {
   try {

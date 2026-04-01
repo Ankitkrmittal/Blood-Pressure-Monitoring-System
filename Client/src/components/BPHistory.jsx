@@ -2,21 +2,15 @@ import React, { useEffect, useState } from "react";
 import { bpApi } from "../api/bpApi";
 
 const BPHistory = ({ userId }) => {
-
   const [history, setHistory] = useState([]);
 
   const loadHistory = async () => {
-
     try {
-
-      const res = await bpApi.getBPHistory(userId);
-
-      setHistory(res.data);
-
+      const data = await bpApi.getBPHistory(userId);
+      setHistory(data);
     } catch (error) {
       console.error(error);
     }
-
   };
 
   useEffect(() => {
