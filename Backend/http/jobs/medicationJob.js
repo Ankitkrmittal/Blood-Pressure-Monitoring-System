@@ -15,8 +15,8 @@ const sendEmail = async (to, medicineName, scheduledTime) => {
       minute: "2-digit"
     });
 
-    await resend.emails.send({
-      from: "onboarding@resend.dev",
+    const { data, error } = await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
       to: to,
       subject: "Medication Reminder",
       html: `
@@ -28,9 +28,16 @@ const sendEmail = async (to, medicineName, scheduledTime) => {
       `
     });
 
-    console.log(`Email sent to ${to}`);
+    if (error) {
+      console.error(`Failed to send email to ${to}:`, error);
+      return false;
+    }
+
+    console.log(`Email sent to ${to} with id ${data?.id || "unknown"}`);
+    return true;
   } catch (err) {
-    console.error(` Failed to send email to ${to}`, err);
+    console.error(`Failed to send email to ${to}`, err);
+    return false;
   }
 };
 
@@ -76,20 +83,25 @@ cron.schedule(
       });
 
       //  Send emails
+      const sentLogIds = [];
+
       for (const log of pending) {
         const email = log.medication.user.email;
         const medicineName = log.medication.medicineName;
 
-        console.log(` Sending email to ${email}`);
+        console.log(`Sending email to ${email}`);
 
-        await sendEmail(email, medicineName, log.scheduledTime);
+        const sent = await sendEmail(email, medicineName, log.scheduledTime);
+        if (sent) {
+          sentLogIds.push(log.id);
+        }
       }
 
       //  Mark reminder as sent
-      if (pending.length > 0) {
+      if (sentLogIds.length > 0) {
         await prisma.medicationLog.updateMany({
           where: {
-            id: { in: pending.map((p) => p.id) }
+            id: { in: sentLogIds }
           },
           data: {
             reminderSent: true

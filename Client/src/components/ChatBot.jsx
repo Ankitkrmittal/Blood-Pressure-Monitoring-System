@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { mlApi } from "../api/mlApi";
+import { assistanceApi } from "../api/assistanceApi";
 import "../styles/dashboard.css";
 
 const suggestedPrompts = [
@@ -15,10 +15,16 @@ const riskToneMap = {
   high: "#dc2626",
 };
 
+const safetyToneMap = {
+  routine: "#15803d",
+  caution: "#d97706",
+  emergency: "#dc2626",
+};
+
 const ChatBot = () => {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([
-    { sender: "bot", text: "Loading your health assistant..." },
+    { sender: "bot", text: "Loading your personalized assistance..." },
   ]);
   const [loading, setLoading] = useState(true);
   const [assistantContext, setAssistantContext] = useState(null);
@@ -33,7 +39,7 @@ const ChatBot = () => {
           sender: item.sender,
           text: item.text,
         }));
-      const response = await mlApi.getAssistantResponse(message, chatHistory);
+      const response = await assistanceApi.getAssistantResponse(message, chatHistory);
       const data = response.data;
       setAssistantContext(data);
 
@@ -84,7 +90,7 @@ const ChatBot = () => {
   };
 
   const resetChat = async () => {
-    setMessages([{ sender: "bot", text: "Refreshing your saved health context..." }]);
+    setMessages([{ sender: "bot", text: "Refreshing your saved assistance context..." }]);
     setInput("");
     await loadAssistant();
   };
@@ -92,7 +98,7 @@ const ChatBot = () => {
   return (
     <div className="chatbot">
       <div className="chat-header">
-        <h2>Health Assistant</h2>
+        <h2>Smart Assistance</h2>
         <button className="reset-btn" type="button" onClick={resetChat}>
           Refresh Context
         </button>
@@ -110,6 +116,16 @@ const ChatBot = () => {
             BP Status:
             <strong>{` ${assistantContext.bloodPressureStatus}`}</strong>
           </div>
+          <div className="assistant-insight__chip">
+            Safety:
+            <strong style={{ color: safetyToneMap[assistantContext.safetyLevel] || "#2563eb" }}>
+              {` ${assistantContext.safetyLevel}`}
+            </strong>
+          </div>
+          <div className="assistant-insight__chip">
+            Source:
+            <strong>{` ${assistantContext.assistanceSource}`}</strong>
+          </div>
           {assistantContext.profileSnapshot?.dietType && (
             <div className="assistant-insight__chip">
               Diet:
@@ -122,6 +138,12 @@ const ChatBot = () => {
               <strong>{` ${assistantContext.profileSnapshot.bmi}`}</strong>
             </div>
           )}
+        </div>
+      )}
+
+      {assistantContext?.safetyReasons?.length > 0 && (
+        <div className="assistant-warning">
+          Safety notes: {assistantContext.safetyReasons.join(" ")}
         </div>
       )}
 
@@ -191,7 +213,7 @@ const ChatBot = () => {
           placeholder={
             loading
               ? "Loading your profile-based recommendations..."
-              : "Ask about diet, BP, exercise, sleep, smoking, or your health goal..."
+              : "Ask about BP, food, exercise, symptoms, stress, sleep, or your weekly focus..."
           }
           onKeyDown={(e) => {
             if (e.key === "Enter") {

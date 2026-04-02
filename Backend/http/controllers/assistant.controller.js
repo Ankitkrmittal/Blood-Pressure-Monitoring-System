@@ -20,7 +20,7 @@ export async function healthAssistantController(req, res) {
       },
     });
 
-    const response = buildHealthAssistantResponse({
+    const response = await buildHealthAssistantResponse({
       user: req.user,
       profile,
       latestBP,

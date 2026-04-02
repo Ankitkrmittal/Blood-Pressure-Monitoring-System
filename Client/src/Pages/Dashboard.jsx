@@ -284,10 +284,10 @@ const Dashboard = () => {
           <div className="dashboard-panel__header">
             <div>
               <p className="dashboard-panel__eyebrow">Assistant</p>
-              <h2>Health assistant</h2>
+              <h2>Smart assistance</h2>
             </div>
             <p className="dashboard-panel__caption">
-              Get quick guidance while working through your daily health tasks.
+              Use the advanced Assistance model for profile-aware guidance while managing daily health tasks.
             </p>
           </div>
 

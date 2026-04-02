@@ -1,8 +1,28 @@
+import axios from "axios";
+
 const BP_THRESHOLDS = {
   elevated: { systolic: 120, diastolic: 80 },
   stage1: { systolic: 130, diastolic: 80 },
   stage2: { systolic: 140, diastolic: 90 },
 };
+
+const ASSISTANCE_API_URL = (process.env.ASSISTANCE_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+const ASSISTANCE_API_KEY = process.env.ASSISTANCE_API_KEY || process.env.APP_API_KEY || "";
+const ASSISTANCE_TIMEOUT_MS = Number(process.env.ASSISTANCE_TIMEOUT_MS || 10000);
+
+const symptomTriggers = [
+  "chest pain",
+  "shortness of breath",
+  "breathlessness",
+  "vision loss",
+  "blurred vision",
+  "weakness",
+  "numbness",
+  "severe headache",
+  "confusion",
+  "fainting",
+  "dizziness",
+];
 
 function normalizeList(value) {
   if (!Array.isArray(value)) {
@@ -65,9 +85,7 @@ function getBPStatus(latestBP) {
     return {
       label: "Elevated",
       severity: 2,
-      notes: [
-        "Your systolic pressure is slightly elevated.",
-      ],
+      notes: ["Your systolic pressure is slightly elevated."],
     };
   }
 
@@ -215,31 +233,6 @@ function buildProfileSnapshot(profile, latestBP, metrics, riskLevel) {
   };
 }
 
-function buildDefaultReply({ profile, latestBP, riskLevel, dietRecommendations, lifestyleRecommendations, missingFields }) {
-  const name = profile?.user?.name ? `${profile.user.name}, ` : "";
-  const bpText = latestBP
-    ? `Your latest blood pressure is ${latestBP.systolic}/${latestBP.diastolic}.`
-    : "You do not have a saved blood pressure reading yet.";
-  const missingText = missingFields.length
-    ? ` To improve personalization, add ${missingFields.join(", ")} to your profile.`
-    : "";
-
-  return `${name}your current health focus should be ${riskLevel} risk management. ${bpText} The first priorities are ${[...dietRecommendations, ...lifestyleRecommendations].slice(0, 3).join(", ")}.${missingText}`;
-}
-
-function normalizeChatHistory(chatHistory) {
-  if (!Array.isArray(chatHistory)) {
-    return [];
-  }
-
-  return chatHistory
-    .map((entry) => ({
-      sender: entry?.sender || "user",
-      text: `${entry?.text || ""}`.trim(),
-    }))
-    .filter((entry) => entry.text);
-}
-
 function inferActiveTopic(query, history) {
   const combined = [query, ...history.slice(-6).map((entry) => entry.text.toLowerCase())].join(" ");
 
@@ -298,102 +291,92 @@ function getFollowUpPrompts(topic) {
   ];
 }
 
-function buildChatReply({ message, chatHistory, profile, latestBP, riskLevel, dietRecommendations, lifestyleRecommendations, missingFields, metrics }) {
-  const query = `${message || ""}`.toLowerCase();
-  const history = normalizeChatHistory(chatHistory);
-  const activeTopic = inferActiveTopic(query, history);
-
-  if (!query.trim()) {
-    return {
-      reply: buildDefaultReply({
-        profile,
-        latestBP,
-        riskLevel,
-        dietRecommendations,
-        lifestyleRecommendations,
-        missingFields,
-      }),
-      activeTopic,
-      followUpPrompts: getFollowUpPrompts(activeTopic),
-    };
+function normalizeChatHistory(chatHistory) {
+  if (!Array.isArray(chatHistory)) {
+    return [];
   }
 
-  if (activeTopic === "diet") {
-    return {
-      reply: `Based on your ${profile?.dietType || "current"} diet pattern, your best diet moves are: ${dietRecommendations.slice(0, 4).join(" ")}${missingFields.includes("diet type") ? " Save your diet type in profile for more precise meal suggestions." : ""}`,
-      activeTopic,
-      followUpPrompts: getFollowUpPrompts(activeTopic),
-    };
-  }
-
-  if (activeTopic === "bp") {
-    const bpText = latestBP
-      ? `Your latest saved BP is ${latestBP.systolic}/${latestBP.diastolic}.`
-      : "I do not see a saved blood pressure reading yet.";
-    return {
-      reply: `${bpText} My BP-focused advice is: ${lifestyleRecommendations.slice(0, 4).join(" ")}`,
-      activeTopic,
-      followUpPrompts: getFollowUpPrompts(activeTopic),
-    };
-  }
-
-  if (activeTopic === "exercise") {
-    const exerciseText = profile?.exerciseFrequency
-      ? `You currently report exercise on ${profile.exerciseFrequency} day(s) per week.`
-      : "Your current exercise frequency is not saved yet.";
-    return {
-      reply: `${exerciseText} Increase consistent movement gradually. Good options for you are walking, mobility work, and any routine you can maintain safely.`,
-      activeTopic,
-      followUpPrompts: getFollowUpPrompts(activeTopic),
-    };
-  }
-
-  if (activeTopic === "recovery") {
-    return {
-      reply: `Your recovery-related priorities are: ${lifestyleRecommendations
-      .filter((item) => item.toLowerCase().includes("sleep") || item.toLowerCase().includes("stress"))
-      .concat(["Keep a regular sleep schedule and reduce late-night heavy meals or screen exposure."])
-      .slice(0, 3)
-      .join(" ")}`,
-      activeTopic,
-      followUpPrompts: getFollowUpPrompts(activeTopic),
-    };
-  }
-
-  if (activeTopic === "weight") {
-    const bmiText = metrics.bmi ? `Your estimated BMI is ${metrics.bmi}.` : "I cannot estimate BMI without height and weight.";
-    return {
-      reply: `${bmiText} Focus on sustainable calorie control, higher protein or legumes depending on diet type, more fiber, and regular movement.`,
-      activeTopic,
-      followUpPrompts: getFollowUpPrompts(activeTopic),
-    };
-  }
-
-  if (query.includes("summary") || query.includes("overall") || query.includes("recommend")) {
-    return {
-      reply: buildDefaultReply({
-        profile,
-        latestBP,
-        riskLevel,
-        dietRecommendations,
-        lifestyleRecommendations,
-        missingFields,
-      }),
-      activeTopic,
-      followUpPrompts: getFollowUpPrompts(activeTopic),
-    };
-  }
-
-  return {
-    reply: `The strongest recommendations from your saved profile are: ${[...dietRecommendations, ...lifestyleRecommendations]
-      .slice(0, 4)
-      .join(" ")} Ask me specifically about diet, BP, exercise, sleep, stress, or weight for a more targeted answer.`,
-    activeTopic,
-    followUpPrompts: getFollowUpPrompts(activeTopic),
-  };
+  return chatHistory
+    .map((entry) => ({
+      sender: entry?.sender || "user",
+      text: `${entry?.text || ""}`.trim(),
+    }))
+    .filter((entry) => entry.text);
 }
 
-export function buildHealthAssistantResponse({ user, profile, latestBP, message, chatHistory }) {
+function extractSymptoms(message) {
+  const lowerMessage = `${message || ""}`.toLowerCase();
+  return symptomTriggers.filter((symptom) => lowerMessage.includes(symptom));
+}
+
+function buildAssistantPrompt({ user, profileSnapshot, latestBP, riskLevel, missingFields, recommendations, message, chatHistory }) {
+  const latestHistory = chatHistory
+    .slice(-6)
+    .map((entry) => `${entry.sender}: ${entry.text}`)
+    .join("\n");
+
+  const introMessage = message?.trim()
+    || "Provide a short welcome message, summarize the user's current hypertension risk, and suggest the next best actions.";
+
+  return [
+    "You are the primary health assistance model inside a blood pressure monitoring app.",
+    "Use the profile and blood pressure context below to personalize the answer.",
+    "Keep the tone practical and concise. Do not mention that the context was injected by the app.",
+    `User name: ${user?.name || "Unknown"}`,
+    `Risk level: ${riskLevel}`,
+    `Latest BP: ${latestBP ? `${latestBP.systolic}/${latestBP.diastolic}` : "Not available"}`,
+    `Missing profile fields: ${missingFields.length ? missingFields.join(", ") : "None"}`,
+    `Profile context: ${JSON.stringify(profileSnapshot)}`,
+    `Priority recommendations: ${recommendations.slice(0, 5).join(" | ") || "None"}`,
+    latestHistory ? `Recent conversation:\n${latestHistory}` : "Recent conversation: None",
+    `User request: ${introMessage}`,
+  ].join("\n");
+}
+
+async function requestAssistanceModel({ user, profileSnapshot, latestBP, riskLevel, missingFields, recommendations, message, chatHistory }) {
+  const payload = {
+    user_id: `${user?.id || "anonymous-user"}`,
+    message: buildAssistantPrompt({
+      user,
+      profileSnapshot,
+      latestBP,
+      riskLevel,
+      missingFields,
+      recommendations,
+      message,
+      chatHistory,
+    }),
+    systolic: latestBP?.systolic ?? null,
+    diastolic: latestBP?.diastolic ?? null,
+    symptoms: extractSymptoms(message),
+  };
+
+  const headers = {};
+  if (ASSISTANCE_API_KEY) {
+    headers["X-API-Key"] = ASSISTANCE_API_KEY;
+  }
+
+  const { data } = await axios.post(`${ASSISTANCE_API_URL}/chat`, payload, {
+    headers,
+    timeout: ASSISTANCE_TIMEOUT_MS,
+  });
+
+  return data;
+}
+
+function buildLocalFallbackReply({ user, latestBP, riskLevel, recommendations, missingFields }) {
+  const name = user?.name ? `${user.name}, ` : "";
+  const bpText = latestBP
+    ? `your latest blood pressure is ${latestBP.systolic}/${latestBP.diastolic}.`
+    : "you do not have a saved blood pressure reading yet.";
+  const missingText = missingFields.length
+    ? ` Add ${missingFields.join(", ")} in your profile for better personalization.`
+    : "";
+
+  return `${name}your current focus should be ${riskLevel} risk management, ${bpText} Start with ${recommendations.slice(0, 3).join(" ")}${missingText}`;
+}
+
+export async function buildHealthAssistantResponse({ user, profile, latestBP, message, chatHistory }) {
   const hydratedProfile = {
     ...profile,
     user,
@@ -406,28 +389,50 @@ export function buildHealthAssistantResponse({ user, profile, latestBP, message,
   const missingFields = getMissingFields(hydratedProfile, latestBP);
   const dietRecommendations = getDietRecommendations(hydratedProfile, metrics);
   const lifestyleRecommendations = getLifestyleRecommendations(hydratedProfile, metrics, bpStatus);
-  const chatResponse = buildChatReply({
-    message,
-    chatHistory,
-    profile: hydratedProfile,
-    latestBP,
-    riskLevel,
-    dietRecommendations,
-    lifestyleRecommendations,
-    missingFields,
-    metrics,
-  });
+  const profileSnapshot = buildProfileSnapshot(hydratedProfile, latestBP, metrics, riskLevel);
+  const normalizedHistory = normalizeChatHistory(chatHistory);
+  const activeTopic = inferActiveTopic(`${message || ""}`.toLowerCase(), normalizedHistory);
+  const recommendations = [...dietRecommendations, ...lifestyleRecommendations].slice(0, 8);
+
+  let assistanceResponse = null;
+
+  try {
+    assistanceResponse = await requestAssistanceModel({
+      user,
+      profileSnapshot,
+      latestBP,
+      riskLevel,
+      missingFields,
+      recommendations,
+      message,
+      chatHistory: normalizedHistory,
+    });
+  } catch (error) {
+    console.error("Assistance model request failed:", error.message);
+  }
 
   return {
-    profileSnapshot: buildProfileSnapshot(hydratedProfile, latestBP, metrics, riskLevel),
+    profileSnapshot,
     missingFields,
     riskLevel,
     bloodPressureStatus: bpStatus.label,
-    recommendations: [...dietRecommendations, ...lifestyleRecommendations].slice(0, 8),
+    recommendations,
     dietRecommendations,
     lifestyleRecommendations,
-    reply: chatResponse.reply,
-    activeTopic: chatResponse.activeTopic,
-    followUpPrompts: chatResponse.followUpPrompts,
+    reply:
+      assistanceResponse?.reply
+      || buildLocalFallbackReply({
+        user,
+        latestBP,
+        riskLevel,
+        recommendations,
+        missingFields,
+      }),
+    activeTopic,
+    followUpPrompts: getFollowUpPrompts(activeTopic),
+    sentiment: assistanceResponse?.sentiment || "neutral",
+    safetyLevel: assistanceResponse?.safety_level || "routine",
+    safetyReasons: assistanceResponse?.safety_reasons || bpStatus.notes,
+    assistanceSource: assistanceResponse ? "Assistance" : "local-fallback",
   };
 }
