@@ -6,7 +6,7 @@ const BP_THRESHOLDS = {
   stage2: { systolic: 140, diastolic: 90 },
 };
 
-const ASSISTANCE_API_URL = (process.env.ASSISTANCE_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+const ASSISTANCE_API_URL = (process.env.ASSISTANCE_API_URL || "http://127.0.0.1:8001").replace(/\/$/, "");
 const ASSISTANCE_API_KEY = process.env.ASSISTANCE_API_KEY || process.env.APP_API_KEY || "";
 const ASSISTANCE_TIMEOUT_MS = Number(process.env.ASSISTANCE_TIMEOUT_MS || 10000);
 

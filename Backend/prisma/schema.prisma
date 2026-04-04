@@ -48,11 +48,12 @@ model HealthProfile {
   exerciseTypes   String[]  // ["walking", "gym"]
   sleepHours      Float?    // per day
   waterIntake     Float?    // liters/day
-
+   
   // Diet
   dietType        String?   // "veg", "non-veg", "vegan"
   junkFoodLevel   String?   // "low", "medium", "high"
-
+  
+  
   // Mental Health
   stressLevel     Int?      // 1–10
   sleepQuality    String?   // "good", "poor"

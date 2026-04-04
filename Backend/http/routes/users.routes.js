@@ -5,5 +5,5 @@ import { healthAssistantController } from "../controllers/assistant.controller.j
 const router = Router();
 router.post('/recommendation',recommendationController);
 router.post("/assistant", healthAssistantController);
-//router.post('/update/bp',)
+
 export default router;
