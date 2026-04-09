@@ -1,6 +1,5 @@
 import { Navigate, Outlet } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import Sidebar from "../components/Sidebar";
 import useAuth from "../context/authContext";
 import "../styles/navbar.css";
 
@@ -13,12 +12,13 @@ const Layout = () => {
 
   return (
     <div className="app-shell">
-      <Sidebar />
       <div className="app-shell__content">
         <Navbar />
-        <div className="app-shell__page">
-          <Outlet />
-        </div>
+        <main className="app-shell__page">
+          <div className="app-shell__page-inner">
+            <Outlet />
+          </div>
+        </main>
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import Signup from "./Pages/Signup";
 import Dashboard from "./Pages/Dashboard";
 import Signin from "./Pages/Signin";
 import ProfilePage from "./Pages/ProfilePage";
+import AssistancePage from "./Pages/AssistancePage";
 import Layout from "./layout/Layout";
 
 const App = () => {
@@ -26,6 +27,7 @@ const App = () => {
       <Route element={<Layout />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/assistance" element={<AssistancePage />} />
       </Route>
       <Route
         path="*"
@@ -36,5 +38,4 @@ const App = () => {
 };
 
 export default App;
-
 

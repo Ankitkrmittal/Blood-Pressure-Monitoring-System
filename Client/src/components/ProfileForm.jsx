@@ -44,9 +44,190 @@ const mapProfileToForm = (profile) => ({
   healthGoal: profile?.healthGoal || "",
 });
 
+const sections = [
+  {
+    title: "Basic details",
+    description: "Core information used for health calculations and personalization.",
+    fields: [
+      {
+        name: "age",
+        label: "Age",
+        type: "number",
+        min: "1",
+        placeholder: "Enter your age",
+      },
+      {
+        name: "gender",
+        label: "Gender",
+        type: "select",
+        placeholder: "Select gender",
+        options: [
+          { value: "male", label: "Male" },
+          { value: "female", label: "Female" },
+          { value: "other", label: "Other" },
+        ],
+      },
+      {
+        name: "weight",
+        label: "Weight (kg)",
+        type: "number",
+        min: "1",
+        step: "0.1",
+        placeholder: "Enter your weight",
+      },
+      {
+        name: "height",
+        label: "Height (cm)",
+        type: "number",
+        min: "1",
+        step: "0.1",
+        placeholder: "Enter your height",
+      },
+    ],
+  },
+  {
+    title: "Habits and lifestyle",
+    description: "These fields help the app tailor risk indicators and recommendations.",
+    fields: [
+      {
+        name: "isSmoker",
+        label: "Smoking status",
+        type: "select",
+        placeholder: "Select smoking status",
+        options: [
+          { value: "true", label: "Smoker" },
+          { value: "false", label: "Non-smoker" },
+        ],
+      },
+      {
+        name: "alcoholUse",
+        label: "Alcohol use",
+        type: "select",
+        placeholder: "Select alcohol use",
+        options: [
+          { value: "none", label: "None" },
+          { value: "occasionally", label: "Occasionally" },
+          { value: "frequent", label: "Frequent" },
+        ],
+      },
+      {
+        name: "exerciseFrequency",
+        label: "Exercise days per week",
+        type: "number",
+        min: "0",
+        max: "7",
+        placeholder: "For example, 4",
+      },
+      {
+        name: "sleepHours",
+        label: "Sleep hours per night",
+        type: "number",
+        min: "0",
+        max: "24",
+        step: "0.5",
+        placeholder: "For example, 7.5",
+      },
+      {
+        name: "waterIntake",
+        label: "Water intake (liters/day)",
+        type: "number",
+        min: "0",
+        step: "0.1",
+        placeholder: "For example, 2.5",
+      },
+      {
+        name: "stressLevel",
+        label: "Stress level (1-10)",
+        type: "number",
+        min: "1",
+        max: "10",
+        placeholder: "Rate your stress",
+      },
+      {
+        name: "dietType",
+        label: "Diet type",
+        type: "select",
+        placeholder: "Select diet type",
+        options: [
+          { value: "veg", label: "Vegetarian" },
+          { value: "non-veg", label: "Non-vegetarian" },
+          { value: "vegan", label: "Vegan" },
+          { value: "eggetarian", label: "Eggetarian" },
+        ],
+      },
+      {
+        name: "junkFoodLevel",
+        label: "Junk food intake",
+        type: "select",
+        placeholder: "Select intake level",
+        options: [
+          { value: "low", label: "Low" },
+          { value: "medium", label: "Medium" },
+          { value: "high", label: "High" },
+        ],
+      },
+      {
+        name: "sleepQuality",
+        label: "Sleep quality",
+        type: "select",
+        placeholder: "Select sleep quality",
+        options: [
+          { value: "good", label: "Good" },
+          { value: "average", label: "Average" },
+          { value: "poor", label: "Poor" },
+        ],
+      },
+      {
+        name: "exerciseTypes",
+        label: "Exercise types",
+        type: "textarea",
+        placeholder: "Walking, yoga, cycling",
+        hint: "Separate multiple activities with commas.",
+        span: "full",
+      },
+    ],
+  },
+  {
+    title: "Health background",
+    description: "Add medical context so assistant responses stay relevant to your profile.",
+    fields: [
+      {
+        name: "medicalConditions",
+        label: "Medical conditions",
+        type: "textarea",
+        placeholder: "Hypertension, diabetes",
+        hint: "Leave blank if none. Use commas for multiple items.",
+      },
+      {
+        name: "familyHistory",
+        label: "Family history",
+        type: "textarea",
+        placeholder: "High blood pressure, heart disease",
+        hint: "Add conditions that run in your family.",
+      },
+      {
+        name: "healthGoal",
+        label: "Primary health goal",
+        type: "textarea",
+        placeholder: "Control blood pressure and improve stamina",
+        hint: "Write in plain language so your dashboard guidance is easier to tailor.",
+        span: "full",
+      },
+    ],
+  },
+];
+
+const fieldCount = sections.reduce((count, section) => count + section.fields.length, 0);
+
 const ProfileForm = () => {
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState({ type: "", text: "" });
+
+  const completedFields = Object.values(form).filter((value) => value !== "").length;
+
+  const completionPercent = Math.round((completedFields / fieldCount) * 100);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -54,6 +235,10 @@ const ProfileForm = () => {
       ...prev,
       [name]: value,
     }));
+
+    if (message.text) {
+      setMessage({ type: "", text: "" });
+    }
   };
 
   useEffect(() => {
@@ -61,13 +246,15 @@ const ProfileForm = () => {
       try {
         const profile = await profileApi.getProfile();
 
-        if (!profile) {
-          return;
+        if (profile) {
+          setForm(mapProfileToForm(profile));
         }
-
-        setForm(mapProfileToForm(profile));
       } catch (err) {
         console.error("Failed to fetch profile", err);
+        setMessage({
+          type: "error",
+          text: "We could not load your saved profile. You can still update the form below.",
+        });
       } finally {
         setLoading(false);
       }
@@ -78,125 +265,116 @@ const ProfileForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
+    setMessage({ type: "", text: "" });
 
     try {
       const formattedData = formatProfileData(form);
       const savedProfile = await profileApi.updateProfile(formattedData);
       setForm(mapProfileToForm(savedProfile));
-      alert("Profile updated successfully!");
+      setMessage({ type: "success", text: "Profile updated successfully." });
     } catch (err) {
       console.error(err);
-      alert("Error updating profile");
+      setMessage({ type: "error", text: "Could not update your profile. Please try again." });
+    } finally {
+      setSaving(false);
     }
   };
 
+  const renderField = (field) => {
+    const commonProps = {
+      id: field.name,
+      name: field.name,
+      value: form[field.name],
+      onChange: handleChange,
+    };
+
+    return (
+      <label
+        key={field.name}
+        className={`profile-form__field${field.span === "full" ? " profile-form__field--full" : ""}`}
+      >
+        <span className="profile-form__label">{field.label}</span>
+        {field.type === "select" ? (
+          <select {...commonProps}>
+            <option value="">{field.placeholder}</option>
+            {field.options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        ) : field.type === "textarea" ? (
+          <textarea {...commonProps} rows="3" placeholder={field.placeholder} />
+        ) : (
+          <input
+            {...commonProps}
+            type={field.type}
+            min={field.min}
+            max={field.max}
+            step={field.step}
+            placeholder={field.placeholder}
+          />
+        )}
+        {field.hint ? <span className="profile-form__hint">{field.hint}</span> : null}
+      </label>
+    );
+  };
+
   if (loading) {
-    return <p>Loading profile...</p>;
+    return (
+      <div className="profile-form profile-form--loading">
+        <p className="profile-form__loading">Loading profile...</p>
+      </div>
+    );
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>Health Profile</h2>
+    <form className="profile-form" onSubmit={handleSubmit}>
+      <div className="profile-form__hero">
+        <div>
+          <p className="profile-form__eyebrow">Health Profile</p>
+          <h2>Make every field easy to review later</h2>
+          <p className="profile-form__intro">
+            Each input now has a permanent label, so your saved information stays clear even after
+            the placeholder disappears.
+          </p>
+        </div>
+        <div className="profile-form__progress-card">
+          <span className="profile-form__progress-label">Profile completion</span>
+          <strong>{completionPercent}%</strong>
+          <p>
+            {completedFields} of {fieldCount} fields filled
+          </p>
+        </div>
+      </div>
 
-      <input name="age" placeholder="Age" value={form.age} onChange={handleChange} />
-      <select name="gender" value={form.gender} onChange={handleChange}>
-        <option value="">Gender</option>
-        <option value="male">Male</option>
-        <option value="female">Female</option>
-        <option value="other">Other</option>
-      </select>
-      <input name="weight" placeholder="Weight in kg" value={form.weight} onChange={handleChange} />
-      <input name="height" placeholder="Height in cm" value={form.height} onChange={handleChange} />
+      {message.text ? (
+        <p className={`profile-form__message profile-form__message--${message.type}`}>
+          {message.text}
+        </p>
+      ) : null}
 
-      <select name="isSmoker" value={form.isSmoker} onChange={handleChange}>
-        <option value="">Smoking status</option>
-        <option value="true">Smoker</option>
-        <option value="false">Non-smoker</option>
-      </select>
+      {sections.map((section) => (
+        <section key={section.title} className="profile-form__section">
+          <div className="profile-form__section-header">
+            <div>
+              <h3>{section.title}</h3>
+              <p>{section.description}</p>
+            </div>
+          </div>
+          <div className="profile-form__grid">{section.fields.map(renderField)}</div>
+        </section>
+      ))}
 
-      <select name="alcoholUse" value={form.alcoholUse} onChange={handleChange}>
-        <option value="">Alcohol use</option>
-        <option value="none">None</option>
-        <option value="occasionally">Occasionally</option>
-        <option value="frequent">Frequent</option>
-      </select>
-
-      <input
-        name="exerciseFrequency"
-        placeholder="Exercise days per week"
-        value={form.exerciseFrequency}
-        onChange={handleChange}
-      />
-      <input
-        name="exerciseTypes"
-        placeholder="Exercise types (comma separated)"
-        value={form.exerciseTypes}
-        onChange={handleChange}
-      />
-      <input
-        name="sleepHours"
-        placeholder="Sleep hours per night"
-        value={form.sleepHours}
-        onChange={handleChange}
-      />
-      <input
-        name="waterIntake"
-        placeholder="Water intake in liters/day"
-        value={form.waterIntake}
-        onChange={handleChange}
-      />
-
-      <select name="dietType" value={form.dietType} onChange={handleChange}>
-        <option value="">Diet type</option>
-        <option value="veg">Vegetarian</option>
-        <option value="non-veg">Non-vegetarian</option>
-        <option value="vegan">Vegan</option>
-        <option value="eggetarian">Eggetarian</option>
-      </select>
-
-      <select name="junkFoodLevel" value={form.junkFoodLevel} onChange={handleChange}>
-        <option value="">Junk food level</option>
-        <option value="low">Low</option>
-        <option value="medium">Medium</option>
-        <option value="high">High</option>
-      </select>
-
-      <input
-        name="stressLevel"
-        placeholder="Stress level from 1 to 10"
-        value={form.stressLevel}
-        onChange={handleChange}
-      />
-
-      <select name="sleepQuality" value={form.sleepQuality} onChange={handleChange}>
-        <option value="">Sleep quality</option>
-        <option value="good">Good</option>
-        <option value="average">Average</option>
-        <option value="poor">Poor</option>
-      </select>
-
-      <input
-        name="medicalConditions"
-        placeholder="Medical conditions (comma separated)"
-        value={form.medicalConditions}
-        onChange={handleChange}
-      />
-
-      <input
-        name="familyHistory"
-        placeholder="Family history (comma separated)"
-        value={form.familyHistory}
-        onChange={handleChange}
-      />
-
-      <input
-        name="healthGoal"
-        placeholder="Health goal such as bp_control or weight_loss"
-        value={form.healthGoal}
-        onChange={handleChange}
-      />
-
-      <button type="submit">Save</button>
+      <div className="profile-form__footer">
+        <p className="profile-form__footer-note">
+          Tip: use commas for lists such as exercise types, medical conditions, and family history.
+        </p>
+        <button className="profile-form__submit" type="submit" disabled={saving}>
+          {saving ? "Saving..." : "Save profile"}
+        </button>
+      </div>
     </form>
   );
 };

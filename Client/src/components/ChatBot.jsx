@@ -10,15 +10,15 @@ const suggestedPrompts = [
 ];
 
 const riskToneMap = {
-  low: "#15803d",
-  moderate: "#d97706",
-  high: "#dc2626",
+  low: "var(--success-strong)",
+  moderate: "var(--warning-strong)",
+  high: "var(--danger-strong)",
 };
 
 const safetyToneMap = {
-  routine: "#15803d",
-  caution: "#d97706",
-  emergency: "#dc2626",
+  routine: "var(--success-strong)",
+  caution: "var(--warning-strong)",
+  emergency: "var(--danger-strong)",
 };
 
 const ChatBot = () => {
@@ -108,7 +108,7 @@ const ChatBot = () => {
         <div className="assistant-insight">
           <div className="assistant-insight__chip">
             Risk:
-            <strong style={{ color: riskToneMap[assistantContext.riskLevel] || "#2563eb" }}>
+            <strong style={{ color: riskToneMap[assistantContext.riskLevel] || "var(--primary)" }}>
               {` ${assistantContext.riskLevel}`}
             </strong>
           </div>
@@ -118,7 +118,7 @@ const ChatBot = () => {
           </div>
           <div className="assistant-insight__chip">
             Safety:
-            <strong style={{ color: safetyToneMap[assistantContext.safetyLevel] || "#2563eb" }}>
+            <strong style={{ color: safetyToneMap[assistantContext.safetyLevel] || "var(--primary)" }}>
               {` ${assistantContext.safetyLevel}`}
             </strong>
           </div>

@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { bpApi } from "../api/bpApi";
-import ChatBot from "../components/ChatBot";
 import BPTrendDashboard from "../components/BPTrendDashboard";
 import ConsultationPanel from "../components/ConsultationPanel";
 import useAuth from "../context/authContext";
@@ -105,6 +104,13 @@ const Dashboard = () => {
           <button
             type="button"
             className="dashboard-secondary-button"
+            onClick={() => navigate("/assistance")}
+          >
+            Open Assistance
+          </button>
+          <button
+            type="button"
+            className="dashboard-secondary-button"
             onClick={() => navigate("/profile")}
           >
             Manage Profile
@@ -147,8 +153,7 @@ const Dashboard = () => {
         </div>
       </section>
 
-      <div className="dashboard-grid">
-        <section className="card dashboard-workspace">
+      <section className="card dashboard-workspace">
           {activeTab === "medication" && (
             <div className="dashboard-panel">
               <div className="dashboard-panel__header">
@@ -278,39 +283,7 @@ const Dashboard = () => {
               <ConsultationPanel />
             </div>
           )}
-        </section>
-
-        <section className="card dashboard-assistant">
-          <div className="dashboard-panel__header">
-            <div>
-              <p className="dashboard-panel__eyebrow">Assistant</p>
-              <h2>Smart assistance</h2>
-            </div>
-            <p className="dashboard-panel__caption">
-              Use the advanced Assistance model for profile-aware guidance while managing daily health tasks.
-            </p>
-          </div>
-
-          <div className="assistant-shell">
-            <div className="assistant-shell__tips">
-              <div className="assistant-tip">
-                <strong>Medication Reminder</strong>
-                <span>Track schedules and keep medication timing organized.</span>
-              </div>
-              <div className="assistant-tip">
-                <strong>Update BP</strong>
-                <span>Record fresh blood pressure readings as soon as you take them.</span>
-              </div>
-              <div className="assistant-tip">
-                <strong>Previous Readings</strong>
-                <span>Review your progress and compare readings over time.</span>
-              </div>
-            </div>
-
-            <ChatBot />
-          </div>
-        </section>
-      </div>
+      </section>
     </div>
   );
 };
