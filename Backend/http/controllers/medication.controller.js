@@ -34,13 +34,8 @@ export const getUserMedications = async (req, res) => {
     console.log("checking db ")
     const medications = await prisma.medicationSchedule.findMany({
       where: { userId },
-     include: {
+      include: {
         logs: true,
-        user: {
-          select: {
-            email: true
-          }
-        }
       }
     })
     
