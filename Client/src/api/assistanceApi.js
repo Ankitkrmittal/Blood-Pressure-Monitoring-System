@@ -1,13 +1,19 @@
 import axios from "./axios";
 
-async function getAssistantResponse(message = "", chatHistory = []) {
+async function getAssistantResponse(message = "", chatHistory = [], conversationId) {
+  const payload = {
+    message,
+    chatHistory,
+  };
+
+  if (conversationId) {
+    payload.conversationId = conversationId;
+  }
+
   const { data: response } = await axios({
     method: "post",
     url: "/api/user/assistant",
-    data: {
-      message,
-      chatHistory,
-    },
+    data: payload,
   });
 
   return response;

@@ -1,57 +1,203 @@
-from typing import List
+from typing import Iterable, List
+
+from ..models import ChatTurn, SafetyAssessment
 
 
 class EducationAgent:
-    """Returns short, curated educational snippets about hypertension."""
+    """Curates focused guidance based on topic, profile context, and rule-based recommendations."""
 
     def __init__(self) -> None:
         self._snippets = {
-            "what_is_htn": (
-                "Hypertension (high blood pressure) means the force of blood against your artery walls "
-                "is consistently too high. Over time, this increases the risk of heart attack, stroke, "
-                "kidney disease, and other problems."
+            "bp": (
+                "Track blood pressure at consistent times, rest quietly for five minutes before checking, "
+                "and share repeated high readings with your clinician."
             ),
-            "lifestyle": (
-                "Key lifestyle steps for blood pressure control include: reducing salt intake, eating more "
-                "fruits and vegetables, staying physically active most days of the week, maintaining a "
-                "healthy weight, limiting alcohol, and not smoking."
+            "diet": (
+                "Lower-sodium, high-fiber meals with fruits, vegetables, whole grains, and lean protein are "
+                "strong fits for blood pressure control."
             ),
-            "meds": (
-                "Blood pressure medicines work best when they are taken exactly as prescribed. Do not stop "
-                "or change them on your own; always talk with your doctor first if you have side effects "
-                "or concerns."
+            "exercise": (
+                "Regular walking and other moderate activity can improve blood pressure when increased gradually "
+                "and done consistently."
             ),
-            "monitoring": (
-                "Home blood pressure monitoring can help you and your clinician see how your numbers change "
-                "over time. Try to measure at the same times each day, in a calm setting, and record the values."
+            "recovery": (
+                "Stress, sleep, and hydration often affect blood pressure control more than people expect, so "
+                "steady routines matter."
             ),
-            "emergency": (
-                "If you ever have very high blood pressure (around or above 180/120 mm Hg) together with "
-                "severe chest pain, severe headache, confusion, trouble speaking, weakness, vision changes, "
-                "or shortness of breath, treat it as an emergency and seek immediate in-person care."
+            "weight": (
+                "Even moderate weight loss can improve blood pressure, energy, and long-term cardiovascular risk."
+            ),
+            "medication": (
+                "Take blood pressure medicines exactly as prescribed and discuss side effects with a clinician "
+                "before making any medication changes."
+            ),
+            "general": (
+                "The most effective hypertension plan combines home monitoring, a sustainable food pattern, "
+                "consistent movement, stress management, and follow-up with a clinician."
             ),
         }
 
-    def get_snippets_for_query(self, user_text: str) -> List[str]:
-        text = user_text.lower()
-        selected: List[str] = []
+    def infer_topic(self, user_text: str, history: Iterable[ChatTurn]) -> str:
+        current_text = user_text.lower()
+        history_text = " ".join(turn.text.lower() for turn in list(history)[-4:])
 
-        if any(k in text for k in ["what is hypertension", "what is high blood pressure", "explain hypertension"]):
-            selected.append(self._snippets["what_is_htn"])
+        if any(keyword in current_text for keyword in ["diet", "meal", "food", "eat", "protein", "salt", "nutrition", "dash"]):
+            return "diet"
+        if any(keyword in current_text for keyword in ["exercise", "walk", "activity", "workout", "gym"]):
+            return "exercise"
+        if any(keyword in current_text for keyword in ["sleep", "stress", "anxiety", "recovery", "rest"]):
+            return "recovery"
+        if any(keyword in current_text for keyword in ["weight", "bmi", "calorie", "fat loss"]):
+            return "weight"
+        if any(keyword in current_text for keyword in ["medicine", "medication", "tablet", "pill", "side effect"]):
+            return "medication"
+        if any(
+            keyword in current_text
+            for keyword in ["bp", "pressure", "hypertension", "systolic", "diastolic", "reading"]
+        ):
+            return "bp"
+        if any(
+            keyword in current_text
+            for keyword in [
+                "fever",
+                "weakness",
+                "dizziness",
+                "dizzy",
+                "fatigue",
+                "nausea",
+                "symptom",
+                "headache",
+                "cold",
+                "cough",
+                "runny nose",
+                "sore throat",
+                "summary",
+                "focus",
+                "week",
+                "plan",
+            ]
+        ):
+            return "general"
 
-        if any(k in text for k in ["diet", "salt", "exercise", "lifestyle", "walk"]):
-            selected.append(self._snippets["lifestyle"])
+        if any(keyword in history_text for keyword in ["diet", "meal", "food", "eat", "protein", "salt", "nutrition"]):
+            return "diet"
+        if any(keyword in history_text for keyword in ["exercise", "walk", "activity", "workout", "gym"]):
+            return "exercise"
+        if any(keyword in history_text for keyword in ["sleep", "stress", "anxiety", "recovery", "rest"]):
+            return "recovery"
+        if any(keyword in history_text for keyword in ["weight", "bmi", "calorie", "fat loss"]):
+            return "weight"
+        if any(keyword in history_text for keyword in ["medicine", "medication", "tablet", "pill", "side effect"]):
+            return "medication"
+        if any(
+            keyword in history_text
+            for keyword in ["bp", "pressure", "hypertension", "systolic", "diastolic", "reading"]
+        ):
+            return "bp"
+        return "general"
 
-        if any(k in text for k in ["medicine", "medication", "pill", "tablets", "side effect"]):
-            selected.append(self._snippets["meds"])
+    def get_snippets_for_topic(self, topic: str, safety: SafetyAssessment) -> List[str]:
+        snippets = [self._snippets.get(topic, self._snippets["general"])]
+        if safety.level == "emergency":
+            snippets.append(
+                "Emergency symptoms or crisis-range blood pressure need immediate in-person medical evaluation."
+            )
+        elif safety.level == "caution":
+            snippets.append(
+                "Repeated elevated readings deserve closer monitoring and a timely clinical follow-up."
+            )
+        return snippets
 
-        if any(k in text for k in ["monitor", "home reading", "bp monitor", "check my pressure"]):
-            selected.append(self._snippets["monitoring"])
+    def build_priority_actions(
+        self,
+        topic: str,
+        recommendations: List[str],
+        missing_fields: List[str],
+        safety: SafetyAssessment,
+    ) -> List[str]:
+        actions: List[str] = []
 
-        if any(k in text for k in ["emergency", "crisis", "very high", "danger"]):
-            selected.append(self._snippets["emergency"])
+        if safety.level == "emergency":
+            actions.append("Seek urgent in-person medical care now instead of self-managing this at home.")
+        elif safety.level == "caution":
+            actions.append("Monitor your blood pressure closely and arrange medical follow-up if readings stay high.")
 
-        if not selected:
-            selected.append(self._snippets["what_is_htn"])
+        topic_keywords = {
+            "diet": ["diet", "meal", "food", "salt", "protein", "dash"],
+            "exercise": ["exercise", "activity", "walk", "training"],
+            "recovery": ["sleep", "stress", "hydration", "recovery"],
+            "weight": ["weight", "bmi", "calorie", "portion"],
+            "medication": ["medication", "medicine", "pill", "adherence"],
+            "bp": ["blood pressure", "bp", "reading", "monitor"],
+            "general": [],
+        }
 
-        return selected
+        selected = []
+        for item in recommendations:
+            lower_item = item.lower()
+            if topic == "general" or any(keyword in lower_item for keyword in topic_keywords[topic]):
+                selected.append(item)
+
+        actions.extend(selected[:3])
+
+        if missing_fields:
+            actions.append(
+                "Complete missing profile details such as "
+                + ", ".join(missing_fields[:3])
+                + " so the guidance can stay personalized."
+            )
+
+        deduped: List[str] = []
+        for action in actions:
+            clean_action = action.strip()
+            if clean_action and clean_action not in deduped:
+                deduped.append(clean_action)
+        return deduped[:4]
+
+    def get_follow_up_prompts(self, topic: str, safety: SafetyAssessment) -> List[str]:
+        if safety.level == "emergency":
+            return [
+                "What symptoms should I tell the doctor about?",
+                "How do I explain my recent blood pressure readings?",
+            ]
+        if topic == "diet":
+            return [
+                "Give me a simple low-salt meal plan",
+                "What foods should I avoid this week?",
+                "How can I add more protein without extra sodium?",
+            ]
+        if topic == "exercise":
+            return [
+                "Suggest a beginner walking routine",
+                "What exercise is safe with high BP?",
+                "How often should I work out each week?",
+            ]
+        if topic == "recovery":
+            return [
+                "How can I sleep better for BP control?",
+                "Give me a simple stress routine",
+                "What daily habit should I fix first?",
+            ]
+        if topic == "weight":
+            return [
+                "How can I reduce weight safely?",
+                "What BMI goal should I focus on?",
+                "Which habits help both weight and BP?",
+            ]
+        if topic == "medication":
+            return [
+                "What should I do if I miss a dose?",
+                "When should I talk to my doctor about side effects?",
+                "How can I improve medication adherence?",
+            ]
+        if topic == "bp":
+            return [
+                "How often should I check my BP?",
+                "What numbers should worry me?",
+                "What daily habit lowers BP the most?",
+            ]
+        return [
+            "Give me a full health summary",
+            "What should I focus on this week?",
+            "How can I improve my routine?",
+        ]

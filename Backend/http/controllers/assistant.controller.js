@@ -26,6 +26,7 @@ export async function healthAssistantController(req, res) {
       latestBP,
       message: req.body?.message || "",
       chatHistory: req.body?.chatHistory || [],
+      conversationId: req.body?.conversationId || `${req.user.id}-default`,
     });
 
     res.json({

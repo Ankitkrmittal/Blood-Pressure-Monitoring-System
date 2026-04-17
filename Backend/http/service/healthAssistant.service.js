@@ -6,9 +6,9 @@ const BP_THRESHOLDS = {
   stage2: { systolic: 140, diastolic: 90 },
 };
 
-const ASSISTANCE_API_URL = (process.env.ASSISTANCE_API_URL || "http://127.0.0.1:8001").replace(/\/$/, "");
+const ASSISTANCE_API_URL = (process.env.ASSISTANCE_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 const ASSISTANCE_API_KEY = process.env.ASSISTANCE_API_KEY || process.env.APP_API_KEY || "";
-const ASSISTANCE_TIMEOUT_MS = Number(process.env.ASSISTANCE_TIMEOUT_MS || 10000);
+const ASSISTANCE_TIMEOUT_MS = Number(process.env.ASSISTANCE_TIMEOUT_MS || 30000);
 
 const symptomTriggers = [
   "chest pain",
@@ -309,47 +309,212 @@ function extractSymptoms(message) {
   return symptomTriggers.filter((symptom) => lowerMessage.includes(symptom));
 }
 
-function buildAssistantPrompt({ user, profileSnapshot, latestBP, riskLevel, missingFields, recommendations, message, chatHistory }) {
-  const latestHistory = chatHistory
-    .slice(-6)
-    .map((entry) => `${entry.sender}: ${entry.text}`)
-    .join("\n");
+// function buildAssistantPrompt({ user, profileSnapshot, latestBP, riskLevel, missingFields, recommendations, message, chatHistory }) {
+//   const latestHistory = chatHistory
+//     .slice(-6)
+//     .map((entry) => `${entry.sender}: ${entry.text}`)
+//     .join("\n");
 
-  const introMessage = message?.trim()
-    || "Provide a short welcome message, summarize the user's current hypertension risk, and suggest the next best actions.";
+//   const introMessage = message?.trim()
+//     || "Provide a short welcome message, summarize the user's current hypertension risk, and suggest the next best actions.";
 
-  return [
-    "You are the primary health assistance model inside a blood pressure monitoring app.",
-    "Use the profile and blood pressure context below to personalize the answer.",
-    "Keep the tone practical and concise. Do not mention that the context was injected by the app.",
-    `User name: ${user?.name || "Unknown"}`,
-    `Risk level: ${riskLevel}`,
-    `Latest BP: ${latestBP ? `${latestBP.systolic}/${latestBP.diastolic}` : "Not available"}`,
-    `Missing profile fields: ${missingFields.length ? missingFields.join(", ") : "None"}`,
-    `Profile context: ${JSON.stringify(profileSnapshot)}`,
-    `Priority recommendations: ${recommendations.slice(0, 5).join(" | ") || "None"}`,
-    latestHistory ? `Recent conversation:\n${latestHistory}` : "Recent conversation: None",
-    `User request: ${introMessage}`,
-  ].join("\n");
+//   return [
+//     "You are the primary health assistance model inside a blood pressure monitoring app.",
+//     "Use the profile and blood pressure context below to personalize the answer.",
+//     "Keep the tone practical and concise. Do not mention that the context was injected by the app.",
+//     `User name: ${user?.name || "Unknown"}`,
+//     `Risk level: ${riskLevel}`,
+//     `Latest BP: ${latestBP ? `${latestBP.systolic}/${latestBP.diastolic}` : "Not available"}`,
+//     `Missing profile fields: ${missingFields.length ? missingFields.join(", ") : "None"}`,
+//     `Profile context: ${JSON.stringify(profileSnapshot)}`,
+//     `Priority recommendations: ${recommendations.slice(0, 5).join(" | ") || "None"}`,
+//     latestHistory ? `Recent conversation:\n${latestHistory}` : "Recent conversation: None",
+//     `User request: ${introMessage}`,
+//   ].join("\n");
+// }
+
+// async function requestAssistanceModel({ user, profileSnapshot, latestBP, riskLevel, missingFields, recommendations, message, chatHistory }) {
+//   const payload = {
+//     user_id: `${user?.id || "anonymous-user"}`,
+//     message: buildAssistantPrompt({
+//       user,
+//       profileSnapshot,
+//       latestBP,
+//       riskLevel,
+//       missingFields,
+//       recommendations,
+//       message,
+//       chatHistory,
+//     }),
+//     systolic: latestBP?.systolic ?? null,
+//     diastolic: latestBP?.diastolic ?? null,
+//     symptoms: extractSymptoms(message),
+//   };
+
+//   const headers = {};
+//   if (ASSISTANCE_API_KEY) {
+//     headers["X-API-Key"] = ASSISTANCE_API_KEY;
+//   }
+
+//   const { data } = await axios.post(`${ASSISTANCE_API_URL}/chat`, payload, {
+//     headers,
+//     timeout: ASSISTANCE_TIMEOUT_MS,
+//   });
+
+//   return data;
+// }
+
+// function buildLocalFallbackReply({ user, latestBP, riskLevel, recommendations, missingFields }) {
+//   const name = user?.name ? `${user.name}, ` : "";
+//   const bpText = latestBP
+//     ? `your latest blood pressure is ${latestBP.systolic}/${latestBP.diastolic}.`
+//     : "you do not have a saved blood pressure reading yet.";
+//   const missingText = missingFields.length
+//     ? ` Add ${missingFields.join(", ")} in your profile for better personalization.`
+//     : "";
+
+//   return `${name}your current focus should be ${riskLevel} risk management, ${bpText} Start with ${recommendations.slice(0, 3).join(" ")}${missingText}`;
+// }
+
+// export async function buildHealthAssistantResponse({ user, profile, latestBP, message, chatHistory }) {
+//   const hydratedProfile = {
+//     ...profile,
+//     user,
+//   };
+//   const metrics = {
+//     bmi: calculateBMI(hydratedProfile),
+//   };
+//   const bpStatus = getBPStatus(latestBP);
+//   const riskLevel = getRiskLevel(hydratedProfile, metrics, bpStatus);
+//   const missingFields = getMissingFields(hydratedProfile, latestBP);
+//   const dietRecommendations = getDietRecommendations(hydratedProfile, metrics);
+//   const lifestyleRecommendations = getLifestyleRecommendations(hydratedProfile, metrics, bpStatus);
+//   const profileSnapshot = buildProfileSnapshot(hydratedProfile, latestBP, metrics, riskLevel);
+//   const normalizedHistory = normalizeChatHistory(chatHistory);
+//   const activeTopic = inferActiveTopic(`${message || ""}`.toLowerCase(), normalizedHistory);
+//   const recommendations = [...dietRecommendations, ...lifestyleRecommendations].slice(0, 8);
+
+//   let assistanceResponse = null;
+
+//   try {
+//     assistanceResponse = await requestAssistanceModel({
+//       user,
+//       profileSnapshot,
+//       latestBP,
+//       riskLevel,
+//       missingFields,
+//       recommendations,
+//       message,
+//       chatHistory: normalizedHistory,
+//     });
+//   } catch (error) {
+//     console.error("Assistance model request failed:", error.message);
+//   }
+
+//   return {
+//     profileSnapshot,
+//     missingFields,
+//     riskLevel,
+//     bloodPressureStatus: bpStatus.label,
+//     recommendations,
+//     dietRecommendations,
+//     lifestyleRecommendations,
+//     reply:
+//       assistanceResponse?.reply
+//       || buildLocalFallbackReply({
+//         user,
+//         latestBP,
+//         riskLevel,
+//         recommendations,
+//         missingFields,
+//       }),
+//     activeTopic,
+//     followUpPrompts: getFollowUpPrompts(activeTopic),
+//     sentiment: assistanceResponse?.sentiment || "neutral",
+//     safetyLevel: assistanceResponse?.safety_level || "routine",
+//     safetyReasons: assistanceResponse?.safety_reasons || bpStatus.notes,
+//     assistanceSource: assistanceResponse ? "Assistance" : "local-fallback",
+//   };
+// }
+
+
+function sanitizeAssistantReply(reply) {
+  const cleaned = `${reply || ""}`.trim();
+  if (!cleaned) {
+    return "";
+  }
+
+  // Guard against legacy fixed-template responses.
+  if (/your current focus should be/i.test(cleaned)) {
+    return "";
+  }
+
+  return cleaned;
 }
 
-async function requestAssistanceModel({ user, profileSnapshot, latestBP, riskLevel, missingFields, recommendations, message, chatHistory }) {
+function inferQueryModeFromMessage(message) {
+  const text = `${message || ""}`.toLowerCase();
+
+  if (/(summary|summarize|overview|recap)/.test(text)) return "summary";
+  if (/(diet|meal|food|nutrition|eat)/.test(text)) return "diet";
+  if (/(weekly plan|this week|focus.*week|week plan)/.test(text)) return "weekly_plan";
+  if (/(improve|better|reduce|lower|control|routine|habits)/.test(text)) return "improve";
+  return "general";
+}
+
+async function requestAssistanceModel({
+  user,
+  conversationId,
+  profileSnapshot,
+  latestBP,
+  riskLevel,
+  bpStatus,
+  missingFields,
+  dietRecommendations,
+  lifestyleRecommendations,
+  recommendations,
+  message,
+  chatHistory,
+}) {
+  const normalizedMessage = `${message || ""}`.trim();
+  const normalizedChatHistory = normalizeChatHistory(chatHistory);
+  const latestBPBlock = latestBP
+    ? {
+      systolic: latestBP.systolic ?? null,
+      diastolic: latestBP.diastolic ?? null,
+      recorded_at: latestBP.createdAt ? new Date(latestBP.createdAt).toISOString() : null,
+    }
+    : {
+      systolic: null,
+      diastolic: null,
+      recorded_at: null,
+    };
+
   const payload = {
     user_id: `${user?.id || "anonymous-user"}`,
-    message: buildAssistantPrompt({
-      user,
-      profileSnapshot,
-      latestBP,
-      riskLevel,
-      missingFields,
-      recommendations,
-      message,
-      chatHistory,
-    }),
+    conversation_id: `${conversationId || `${user?.id || "anonymous-user"}-default`}`,
+    user_name: user?.name || null,
+    message: normalizedMessage,
+    profile_snapshot: profileSnapshot,
+    risk_level: riskLevel,
+    blood_pressure_status: bpStatus?.label || "Unknown",
+    missing_fields: missingFields,
+    diet_recommendations: dietRecommendations,
+    lifestyle_recommendations: lifestyleRecommendations,
+    recommendations,
+    chat_history: normalizedChatHistory,
+    latest_bp: latestBPBlock,
     systolic: latestBP?.systolic ?? null,
     diastolic: latestBP?.diastolic ?? null,
-    symptoms: extractSymptoms(message),
+    symptoms: extractSymptoms(normalizedMessage),
   };
+  console.info("Assistance payload ready", {
+    conversation_id: payload.conversation_id,
+    message: payload.message,
+    risk_level: payload.risk_level,
+    blood_pressure_status: payload.blood_pressure_status,
+    chat_history_count: payload.chat_history.length,
+  });
 
   const headers = {};
   if (ASSISTANCE_API_KEY) {
@@ -364,19 +529,24 @@ async function requestAssistanceModel({ user, profileSnapshot, latestBP, riskLev
   return data;
 }
 
-function buildLocalFallbackReply({ user, latestBP, riskLevel, recommendations, missingFields }) {
-  const name = user?.name ? `${user.name}, ` : "";
-  const bpText = latestBP
-    ? `your latest blood pressure is ${latestBP.systolic}/${latestBP.diastolic}.`
-    : "you do not have a saved blood pressure reading yet.";
-  const missingText = missingFields.length
-    ? ` Add ${missingFields.join(", ")} in your profile for better personalization.`
-    : "";
-
-  return `${name}your current focus should be ${riskLevel} risk management, ${bpText} Start with ${recommendations.slice(0, 3).join(" ")}${missingText}`;
+function buildLocalFallbackReply({ message }) {
+  const mode = inferQueryModeFromMessage(message);
+  if (mode === "diet") {
+    return "I could not fetch the assistant response right now. Ask again and I will focus only on diet recommendations.";
+  }
+  if (mode === "summary") {
+    return "I could not fetch the assistant response right now. Ask again and I will provide a structured health summary.";
+  }
+  if (mode === "improve") {
+    return "I could not fetch the assistant response right now. Ask again and I will focus on practical BP improvement habits.";
+  }
+  if (mode === "weekly_plan") {
+    return "I could not fetch the assistant response right now. Ask again and I will create a short weekly action plan.";
+  }
+  return "I could not fetch the assistant response right now. Please try again.";
 }
 
-export async function buildHealthAssistantResponse({ user, profile, latestBP, message, chatHistory }) {
+export async function buildHealthAssistantResponse({ user, profile, latestBP, message, chatHistory, conversationId }) {
   const hydratedProfile = {
     ...profile,
     user,
@@ -399,17 +569,32 @@ export async function buildHealthAssistantResponse({ user, profile, latestBP, me
   try {
     assistanceResponse = await requestAssistanceModel({
       user,
+      conversationId,
       profileSnapshot,
       latestBP,
       riskLevel,
+      bpStatus,
       missingFields,
+      dietRecommendations,
+      lifestyleRecommendations,
       recommendations,
-      message,
+      message: `${message || ""}`,
       chatHistory: normalizedHistory,
     });
   } catch (error) {
     console.error("Assistance model request failed:", error.message);
   }
+
+  const llmReply = sanitizeAssistantReply(assistanceResponse?.reply);
+  const hasUsableLlmReply = Boolean(llmReply);
+  const finalReply = hasUsableLlmReply
+    ? llmReply
+    : buildLocalFallbackReply({
+      message,
+    });
+  const finalAssistanceSource = hasUsableLlmReply
+    ? (assistanceResponse?.assistance_source || "Assistance")
+    : "local-fallback";
 
   return {
     profileSnapshot,
@@ -419,20 +604,12 @@ export async function buildHealthAssistantResponse({ user, profile, latestBP, me
     recommendations,
     dietRecommendations,
     lifestyleRecommendations,
-    reply:
-      assistanceResponse?.reply
-      || buildLocalFallbackReply({
-        user,
-        latestBP,
-        riskLevel,
-        recommendations,
-        missingFields,
-      }),
+    reply: finalReply,
     activeTopic,
     followUpPrompts: getFollowUpPrompts(activeTopic),
     sentiment: assistanceResponse?.sentiment || "neutral",
     safetyLevel: assistanceResponse?.safety_level || "routine",
     safetyReasons: assistanceResponse?.safety_reasons || bpStatus.notes,
-    assistanceSource: assistanceResponse ? "Assistance" : "local-fallback",
+    assistanceSource: finalAssistanceSource,
   };
 }

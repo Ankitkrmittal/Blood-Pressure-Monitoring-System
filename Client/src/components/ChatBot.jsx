@@ -21,6 +21,67 @@ const safetyToneMap = {
   emergency: "var(--danger-strong)",
 };
 
+function cleanMarkdownLine(line) {
+  return line
+    .replace(/^#{1,6}\s*/, "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/__(.*?)__/g, "$1")
+    .trim();
+}
+
+function renderMessageText(text) {
+  const lines = `${text || ""}`
+    .split("\n")
+    .map((line) => line.replace(/\r/g, ""));
+
+  const blocks = [];
+  let listBuffer = [];
+
+  const flushList = () => {
+    if (listBuffer.length) {
+      blocks.push({ type: "list", items: listBuffer });
+      listBuffer = [];
+    }
+  };
+
+  lines.forEach((rawLine) => {
+    const line = rawLine.trim();
+
+    if (!line) {
+      flushList();
+      return;
+    }
+
+    if (/^[-*]\s+/.test(line)) {
+      listBuffer.push(cleanMarkdownLine(line.replace(/^[-*]\s+/, "")));
+      return;
+    }
+
+    flushList();
+    blocks.push({ type: "paragraph", text: cleanMarkdownLine(line) });
+  });
+
+  flushList();
+
+  return blocks.map((block, index) => {
+    if (block.type === "list") {
+      return (
+        <ul key={`list-${index}`} className="chat-message__list">
+          {block.items.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      );
+    }
+
+    return (
+      <p key={`paragraph-${index}`} className="chat-message__paragraph">
+        {block.text}
+      </p>
+    );
+  });
+}
+
 const ChatBot = () => {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([
@@ -188,7 +249,9 @@ const ChatBot = () => {
             key={index}
             className={msg.sender === "bot" ? "bot-msg" : "user-msg"}
           >
-            <p>{msg.text}</p>
+            <div className="chat-message">
+              {renderMessageText(msg.text)}
+            </div>
           </div>
         ))}
       </div>

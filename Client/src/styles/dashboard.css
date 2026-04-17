@@ -577,7 +577,7 @@
 
 .bot-msg {
   background: #eef2ff;
-  padding: 8px;
+  padding: 12px 14px;
   border-radius: 12px;
   margin-bottom: 6px;
 }
@@ -585,10 +585,36 @@
 .user-msg {
   background: linear-gradient(135deg, #2563eb, #0ea5e9);
   color: white;
-  padding: 8px;
+  padding: 12px 14px;
   border-radius: 12px;
   margin-bottom: 6px;
   text-align: right;
+}
+
+.chat-message {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.chat-message__paragraph {
+  margin: 0 0 10px;
+  line-height: 1.6;
+}
+
+.chat-message__paragraph:last-child {
+  margin-bottom: 0;
+}
+
+.chat-message__list {
+  margin: 0 0 10px 18px;
+  padding: 0;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.chat-message__list:last-child {
+  margin-bottom: 0;
 }
 
 .chat-input {

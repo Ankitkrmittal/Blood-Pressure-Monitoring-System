@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.venv/
+.venv_local/
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+*.log
+Assistance/data/*.sqlite3
