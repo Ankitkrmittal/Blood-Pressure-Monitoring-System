@@ -15,7 +15,7 @@ const PORT = Number(process.env.PORT || 4444);
 const app = express();
 
 function getAllowedOrigins() {
-  return `${process.env.CORS_ORIGIN || "http://localhost:5173"}`
+  return `${process.env.CORS_ORIGIN || ""}`
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
